@@ -29,7 +29,7 @@ AGGREGATE_RESULT = {
 }
 
 
-def test_find_browser_buckets_scopes_to_host_and_supports_legacy_unknown_host():
+def test_find_browser_buckets_excludes_unattributed_buckets_by_default():
     buckets = {
         "chrome-laptop": {
             "id": "chrome-laptop",
@@ -53,10 +53,53 @@ def test_find_browser_buckets_scopes_to_host_and_supports_legacy_unknown_host():
         },
     }
 
-    assert find_browser_buckets(buckets, "laptop") == [
+    # A bucket with no usable hostname may belong to another machine on a shared
+    # server, so it must not be folded into this host's summary by default.
+    assert find_browser_buckets(buckets, "laptop") == ["chrome-laptop"]
+
+
+def test_find_browser_buckets_includes_unattributed_buckets_when_opted_in():
+    buckets = {
+        "chrome-laptop": {
+            "id": "chrome-laptop",
+            "type": "web.tab.current",
+            "hostname": "laptop",
+        },
+        "firefox-legacy": {
+            "id": "firefox-legacy",
+            "type": "web.tab.current",
+            "hostname": "unknown",
+        },
+        "firefox-nohost": {
+            "id": "firefox-nohost",
+            "type": "web.tab.current",
+        },
+        "chrome-desktop": {
+            "id": "chrome-desktop",
+            "type": "web.tab.current",
+            "hostname": "desktop",
+        },
+    }
+
+    assert find_browser_buckets(buckets, "laptop", include_legacy=True) == [
         "chrome-laptop",
         "firefox-legacy",
+        "firefox-nohost",
     ]
+    # Opting in must still never pull in a bucket attributed to another host.
+    assert "chrome-desktop" not in find_browser_buckets(
+        buckets, "laptop", include_legacy=True
+    )
+
+
+def test_build_summary_records_legacy_bucket_policy():
+    excluded = build_summary(AGGREGATE_RESULT, START, STOP)
+    assert excluded["redaction"]["legacy_unknown_host_buckets"] == "excluded"
+
+    included = build_summary(
+        AGGREGATE_RESULT, START, STOP, include_legacy_buckets=True
+    )
+    assert included["redaction"]["legacy_unknown_host_buckets"] == "included"
 
 
 def test_build_summary_is_aggregate_only_and_tracks_category_coverage():

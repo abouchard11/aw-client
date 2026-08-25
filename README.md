@@ -70,6 +70,15 @@ aw-client summary HOSTNAME --start 2026-08-17 --stop 2026-08-18 --format json --
 aw-client summary HOSTNAME --start 2026-08-17 --stop 2026-08-18 --format json --no-apps --no-domains
 ```
 
+Browser buckets are scoped to `HOSTNAME`. Buckets that report no hostname (or
+`unknown`) cannot be attributed to a machine, so they are excluded by default — on a
+server collecting from several machines they may belong to a different host. If you
+run a single-machine server and want those legacy buckets counted, opt in:
+
+```bash
+aw-client summary HOSTNAME --start 2026-08-17 --stop 2026-08-18 --include-legacy-buckets
+```
+
 The JSON format is intended for bounded, review-before-send assistant workflows.
 Category names, application names, and domains can still be sensitive. Review the
 exact payload before sharing it with any third-party service, and use `--no-domains`

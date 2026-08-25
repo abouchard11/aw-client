@@ -9,8 +9,22 @@ from tabulate import tabulate
 Summary = Dict[str, Any]
 
 
-def find_browser_buckets(buckets: Dict[str, dict], hostname: str) -> List[str]:
-    """Return browser bucket IDs for a host, including legacy unknown-host buckets."""
+# Hostname values that carry no usable attribution. Legacy watchers report these
+# instead of a real host, so such buckets cannot be assigned to any machine.
+_UNATTRIBUTED_HOSTNAMES = (None, "", "unknown")
+
+
+def find_browser_buckets(
+    buckets: Dict[str, dict], hostname: str, include_legacy: bool = False
+) -> List[str]:
+    """Return browser bucket IDs for a host.
+
+    Buckets whose hostname metadata is missing or "unknown" cannot be attributed
+    to a machine. On a server collecting from several machines they may belong to
+    a different host, so folding them into this host's summary would leak another
+    machine's browsing domains. They are excluded unless the caller opts in with
+    ``include_legacy``, which is only safe on a single-machine server.
+    """
     matches = []
     for bucket_id, bucket in buckets.items():
         if bucket.get("type") != "web.tab.current":
@@ -18,7 +32,11 @@ def find_browser_buckets(buckets: Dict[str, dict], hostname: str) -> List[str]:
 
         data = bucket.get("data") or {}
         bucket_hostname = bucket.get("hostname") or data.get("hostname")
-        if bucket_hostname not in (None, "", "unknown", hostname):
+        if bucket_hostname == hostname:
+            pass
+        elif include_legacy and bucket_hostname in _UNATTRIBUTED_HOSTNAMES:
+            pass
+        else:
             continue
 
         matches.append(bucket.get("id") or bucket_id)
@@ -50,6 +68,7 @@ def build_summary(
     include_apps: bool = True,
     include_domains: bool = True,
     limit: int = 20,
+    include_legacy_buckets: bool = False,
 ) -> Summary:
     """Normalize an aggregate query result into a provider-neutral payload."""
     categories = _aggregate_rows(result.get("category_events", []), "$category", "name")
@@ -101,6 +120,9 @@ def build_summary(
             "chat_or_email_subjects": "omitted",
             "domains": "included" if include_domains else "omitted",
             "raw_events": "omitted",
+            "legacy_unknown_host_buckets": (
+                "included" if include_legacy_buckets else "excluded"
+            ),
         },
     }
 

@@ -342,6 +342,15 @@ def canonical(
     help="Include domain-only browser totals; full URLs are always omitted",
 )
 @click.option(
+    "--include-legacy-buckets",
+    is_flag=True,
+    default=False,
+    help=(
+        "Include browser buckets that report no hostname. Only safe on a "
+        "single-machine server; on a shared server they may belong to another host"
+    ),
+)
+@click.option(
     "--timezone",
     help="Time zone for start and stop options (for example, 'America/Chicago')",
 )
@@ -356,6 +365,7 @@ def summary(
     output_format: str,
     include_apps: bool,
     include_domains: bool,
+    include_legacy_buckets: bool,
     timezone: Optional[str],
 ):
     if timezone:
@@ -371,7 +381,11 @@ def summary(
         raise click.ClickException("--stop must be later than --start")
 
     buckets = obj.client.get_buckets()
-    browser_buckets = find_browser_buckets(buckets, hostname) if include_domains else []
+    browser_buckets = (
+        find_browser_buckets(buckets, hostname, include_legacy=include_legacy_buckets)
+        if include_domains
+        else []
+    )
     params = queries.DesktopQueryParams(
         bid_window=f"aw-watcher-window_{hostname}",
         bid_afk=f"aw-watcher-afk_{hostname}",
@@ -391,6 +405,7 @@ def summary(
         include_apps=include_apps,
         include_domains=include_domains,
         limit=limit,
+        include_legacy_buckets=include_legacy_buckets,
     )
     if output_format == "json":
         print(json.dumps(payload, indent=2))
