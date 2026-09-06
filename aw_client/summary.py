@@ -5,7 +5,6 @@ from typing import Any, Dict, Iterable, List
 
 from tabulate import tabulate
 
-
 Summary = Dict[str, Any]
 
 

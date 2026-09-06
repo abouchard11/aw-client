@@ -7,7 +7,6 @@ from aw_client import cli, queries
 from aw_client.classes import default_classes, get_classes
 from aw_client.summary import build_summary, find_browser_buckets, format_summary
 
-
 START = datetime(2026, 8, 17, 9, tzinfo=timezone.utc)
 STOP = datetime(2026, 8, 17, 12, tzinfo=timezone.utc)
 
@@ -96,9 +95,7 @@ def test_build_summary_records_legacy_bucket_policy():
     excluded = build_summary(AGGREGATE_RESULT, START, STOP)
     assert excluded["redaction"]["legacy_unknown_host_buckets"] == "excluded"
 
-    included = build_summary(
-        AGGREGATE_RESULT, START, STOP, include_legacy_buckets=True
-    )
+    included = build_summary(AGGREGATE_RESULT, START, STOP, include_legacy_buckets=True)
     assert included["redaction"]["legacy_unknown_host_buckets"] == "included"
 
 
